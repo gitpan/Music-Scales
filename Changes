@@ -1,6 +1,14 @@
 Revision history for Perl module Music::Scales
 
-0.01 Sat Apr 12 22:09:25 2003
+0.03	Fixed minor scales + added hamonic + melodic as separate. 
+	Altered notename-generation to fix leading-note bug, handle ## / bb etc.
+
+0.02	Apr 13 2004 Minor POD fixes
+
+0.01	Sat Apr 12 22:09:25 2003
 	- original version; created by ExtUtils::ModuleMaker 0.31229
+
+
+
 
 
