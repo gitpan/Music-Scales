@@ -5,7 +5,7 @@ use Text::Abbrev;
 BEGIN {
 	use Exporter ();
 	use vars qw ($VERSION @ISA @EXPORT);
-	$VERSION     = 0.06;
+	$VERSION     = 0.07;
 	@ISA         = qw (Exporter);
 	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets is_scale get_scale_PDL get_scale_MIDI);
 }
@@ -254,6 +254,7 @@ sub get_scale_notes {
 	my @nums = (2,1,2,2,1,2,2);
 
 	$keynote =~ s/^[a-z]/\u$&/;
+	$keypref='' unless defined $keypref;
 	my $keynum = note_to_num(uc($keynote));
 	$mode = get_mode($mode);
 	my @dists = get_scale_nums($mode,$descending);
