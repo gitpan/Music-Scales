@@ -4,8 +4,8 @@ use Text::Abbrev;
 
 BEGIN {
 	use Exporter ();
-	use vars qw ($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION     = 0.01;
+	use vars qw ($VERSION @ISA @EXPORT);
+	$VERSION     = 0.02;
 	@ISA         = qw (Exporter);
 	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets);
 }

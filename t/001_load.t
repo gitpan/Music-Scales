@@ -2,8 +2,12 @@
 
 # t/001_load.t - check module loading and create testing directory
 
-use Test::More tests => 2;
+use Test;
 
-BEGIN { use_ok( 'Music::Scales' ); }
+BEGIN { plan tests => 1 }
+END { ok($loaded) }
+use Music::Scales;
+$loaded++;
+
 
 
