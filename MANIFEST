@@ -5,5 +5,6 @@ Changes
 lib/Music/Scales.pm
 t/001_load.t
 t/002_generate.t
-t/003_ismode.t
+t/003_isscale.t
+t/004_scalePDL.t
 Makefile.PL

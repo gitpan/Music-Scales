@@ -5,9 +5,9 @@ use Text::Abbrev;
 BEGIN {
 	use Exporter ();
 	use vars qw ($VERSION @ISA @EXPORT);
-	$VERSION     = 0.04;
+	$VERSION     = 0.05;
 	@ISA         = qw (Exporter);
-	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets is_mode);
+	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets is_scale scale_to_PDL);
 }
 
 
@@ -20,7 +20,7 @@ BEGIN {
     use Music::Scales;
 
     my @maj = get_scale_notes('Eb');           # defaults to major
-    print join(" ",@maj);                      # "Eb F G Ab Bb C D Eb"
+    print join(" ",@maj);                      # "Eb F G Ab Bb C D"
     my @blues = get_scale_nums('bl');		   # 'bl','blu','blue','blues'
     print join(" ",@blues);                    # "0 3 5 6 7 10"
     my %min = get_scale_offsets ('G','mm',1);  # descending melodic minor
@@ -50,9 +50,14 @@ This can be overidden with $keypref, setting to be either '#' or 'b' for sharps 
 
 as get_scale_notes(), except it returns a hash of notenames with the values being a semitone offset (-1, 0 or 1) as shown in the synopsis.
 
-=head1 is_mode($modename)
+=head2 is_scale($scalename)
 
-returns true if $modename is a valid mode used in this module.
+returns true if $scalename is a valid scale name used in this module.
+
+=head2 scale_to_PDL($octave,@scale)
+
+A convenience function to turn an array of notenames into the format used by PDL (lower case, s/f for #/b and with an octave number). 
+For example, join(" ",scale_to_pdl(4,get_scale_notes('G','hm'))) will produce "g4 a4 bf4 c5 d5 ef5 fs5".
 
 =head1 SCALES 
 
@@ -61,17 +66,15 @@ The default scale is 'major' if none  / invalid is given.
 Text::Abbrev is used on scalenames, so they can be as abbreviated as unambiguously possible ('dor','io' etc.).
 Other abbreviations are shown in brackets.
 
-  1 ionian
-  1 major 
-  2 dorian
-  3 phrygian 
-  4 lydian 
-  5 mixolydian 
-  6 aeolian 
-  6 minor (m)
-  7 locrian 
-  8 harmonic minor (hm)
-  9 melodic minor (mm)
+  1 ionian / major / hypolydian
+  2 dorian / hypmixolydian
+  3 phrygian / hypoaeolian
+  4 lydian  / hypolocrian
+  5 mixolydian / hypoionian
+  6 aeolian / hypodorian / minor / m
+  7 locrian / hypophrygian
+  8 harmonic minor / hm
+  9 melodic minor / mm
  10 blues 
  11 pentatonic (pmajor)
  12 chromatic 
@@ -112,15 +115,15 @@ This will print every scale in every key, adjusting the enharmonic equivalents a
  Add further range of scales from http://www.cs.ruu.nl/pub/MIDI/DOC/scales.zip
  Improve enharmonic eqivalents.
  Microtones
- Frequency generation (although this is already done by PDL::Audio::Scale)
+ Output notenames in PDL::Audio::Scale format for Frequency generation
  Generate ragas,gamelan etc.  - maybe needs an 'ethnic' subset of modules
 
 =head1 AUTHOR
 
  Ben Daglish (bdaglish@surfnet-ds.co.uk)
 
- Thanks to Steve Hay for pointing out my 'minor' mix-up and other suggestions.
- Thanks also to Gene Boggs for the 'is_mode' suggestion / code.
+ Thanks to Steve Hay for pointing out my 'minor' mix-up and many suggestions.
+ Thanks also to Gene Boggs for the 'is_scale' suggestion / code.
 
 =head1 BUGS 
  
@@ -199,8 +202,7 @@ sub get_scale_nums {
 	if ($descending && $mode == 9) {
 		$dists[5]-- ;$dists[6]--;
 	}
-	@dists = reverse @dists if $descending;
-	@dists;
+	($descending) ? reverse @dists  : @dists;
 }
 
 sub get_scale_offsets {
@@ -217,70 +219,64 @@ sub get_mode {
 	my $mode = shift() || 1;
 	$mode =~ s/[^a-zA-Z0-9]//g;
 	$mode = $modes{lc($mode)} unless $mode =~/^[0-9]+$/;
-	$mode = 1 unless $mode; #default to major
-	$mode = 1 if ($mode > @scales);
-	$mode;
+	($mode && ($mode <= @scales)) ? $mode : 1;
+}
+
+sub note_to_num {
+	my $note = shift();
+	my %note2num = ('A','0','A#','1','BB','1','B','2','C','3','C#','4','DB','4','D','5','D#','6','EB','6','E','7','F','8','F#','9','GB','9','G','10','G#','11','AB','11');
+	return $note if ($note =~/^[0-9]+$/);
+	(defined $note2num{uc($note)}) ? $note2num{uc($note)} : 0;
 }
 
 sub get_scale_notes {
 	my ($keynote,$mode,$descending,$keypref) = @_;
 	my @notes = ('A'..'G');
 	my @nums = (2,1,2,2,1,2,2);
-	my %note2num = ('A','0','A#','1','BB','1','B','2','C','3','C#','4','DB','4','D','5','D#','6','EB','6','E','7','F','8','F#','9','GB','9','G','10','G#','11','AB','11');
-	my %fnum2note = (0,'A',1,'Bb',2,'B',3,'C',4,'Db',5,'D',6,'Eb',7,'E',8,'F',9,'Gb',10,'G',11,'Ab');
-	my %snum2note = (0,'A',1,'A#',2,'B',3,'C',4,'C#',5,'D',6,'D#',7,'E',8,'F',9,'F#',10,'G',11,'G#');
 
-	my $keynum = $keynote || 0;
-	$keynum = $note2num{uc($keynum)} unless $keynum =~/^[0-9]+$/;
+	$keynote =~ s/^[a-z]/\u$&/;
+	my $keynum = note_to_num(uc($keynote));
 	$mode = get_mode($mode);
 	my @dists = get_scale_nums($mode,$descending);
 	@dists = reverse @dists if $descending;
 	my @scale = map {($_+$keynum-$dists[0])%12} @dists;
+	$keypref='b' if (!$keypref && $descending && $mode == 12); #prefer flat descending chromatic
 
-	my %num2note;
-	$keypref='b' if (!$keypref && $descending && $mode == 12);
-	if ($keynote =~ /b/) {%num2note = %fnum2note};
-	if ($keynote =~ /\#/) {%num2note = %snum2note};
-	if ($keypref eq 'b') {%num2note = %fnum2note}; # override
-	%num2note = %snum2note unless %num2note;
-	if (@scale  > 7) {	# we're not bothered by niceties, so just convert
-		if ($descending) {
-			@scale = reverse @scale;
-			unshift @scale,pop(@scale);
-		}
-		return map {$num2note{$_}} @scale;
-	}
-	$keynote = $num2note{$keynote} if $keynote =~/^[0-9]+$/;
-	my $kk = $keynote; $kk =~ s/b|\#//; $kk = ord($kk) - ord('A');
-	foreach(0..$kk-1) {# rotate to keynote
-		push @notes,shift(@notes);
-		push @nums,shift(@nums);
-	}
-	push @notes,shift(@notes);
-	shift(@dists);
-	my $cu = shift(@nums);
-	$cu++ if ($keynote =~ /b/);
-	$cu-- if ($keynote =~ /#/);
+	my %num2note = (0,'A',1,'A#',2,'B',3,'C',4,'C#',5,'D',6,'D#',7,'E',8,'F',9,'F#',10,'G',11,'G#');
+	%num2note = (0,'A',1,'Bb',2,'B',3,'C',4,'Db',5,'D',6,'Eb',7,'E',8,'F',9,'Gb',10,'G',11,'Ab') if (($keypref eq 'b') || ($keynote =~ /.b/i));
 	my @mscale = $keynote;
-	foreach (@dists) {
-		my $m = $_ - $cu;
-		$cu += shift(@nums);
-		my $n = shift(@notes); push @notes,$n;
-		while (abs($m) > 2) {	# double double sharps/flats etc.
-			$n = shift(@notes); push @notes,$n;
-			my $mm = shift(@nums); push @nums,$mm;
-			if ($m > 0) {$m -= $mm;$cu += $mm }
-			elsif ($m < 0){$m += $mm;$cu -= $mm}
+	if (@scale  > 7) {	# we're not bothered by niceties, so just convert
+		@mscale = map {$num2note{$_}} @scale;
+	}
+	else {
+		$keynote = $num2note{$keynote} if $keynote =~/^[0-9]+$/;
+		my $kk = $keynote; $kk =~ s/b|\#//; $kk = ord($kk) - ord('A');
+		foreach(0..$kk-1) {# rotate to keynote
+			push @notes,shift(@notes);
+			push @nums,shift(@nums);
 		}
-		if (@scale < 7 && abs($m) > 1) {	# doesn't need to step up...
-			$n = shift(@notes);push @notes,$n;
-			my $mm = shift(@nums); push @nums,$mm;
-			if ($m > 0) {$m -= $mm; $cu += $mm }
-			elsif ($m < 0){$m += $mm;$cu -= $mm }
+		push @notes,shift(@notes);
+		shift(@dists);
+		my $cu = shift(@nums);
+		$cu++ if ($keynote =~ /b/);
+		$cu-- if ($keynote =~ /#/);
+		foreach (@dists) {
+			my $m = $_ - $cu;
+			my $ns = shift(@nums);
+			push @nums,$ns;
+			my $n = shift(@notes); 
+			push @notes,$n;
+			while (abs($m) > 2 || (@scale < 7 && abs($m) >= $ns)) {	# step up/down notes, 'reducing' flats/sharps
+				$n = shift(@notes); push @notes,$n;
+				if ($m > 0) {$m -= $ns;$cu += $ns }
+				elsif ($m < 0){$m += $ns;$cu -= $ns}
+				$ns = shift(@nums); push @nums,$ns;
+			}
+			$n .= '#' x $m if ($m > 0);
+			$n .= 'b' x abs($m) if ($m < 0);
+			push @mscale,$n;
+			$cu += $ns;
 		}
-		$n .= '#' x $m if ($m > 0);
-		$n .= 'b' x abs($m) if ($m < 0);
-		push @mscale,$n;
 	}
 	if ($descending) {
 		@mscale = reverse @mscale;
@@ -289,10 +285,26 @@ sub get_scale_notes {
 	@mscale;
 }
 
-sub is_mode {
-	my $name = shift;
+
+sub is_scale {
+	my $name = shift();
     $name =~ s/[^a-zA-Z0-9]//g;
     return exists $modes{lc $name} ? 1 : 0;
+}
+
+sub scale_to_PDL {
+	my ($octave,@scale)=@_;
+	my @result;
+	my $last = (note_to_num($scale[0]) + 9) % 12;
+	foreach (@scale) {
+		my $n = (note_to_num($_) + 9) % 12;
+		$octave++ if ($last > $n); #switched over octave at 'c'
+		s/\#/s/g;
+		s/b/f/g;
+		push @result,lc($_).$octave;
+		$last = $n;
+	}
+	@result;
 }
 
 1; 
