@@ -1,8 +1,9 @@
 MANIFEST
 LICENSE
-README
 Todo
 Changes
 lib/Music/Scales.pm
 t/001_load.t
+t/002_generate.t
+t/003_ismode.t
 Makefile.PL

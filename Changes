@@ -1,5 +1,9 @@
 Revision history for Perl module Music::Scales
 
+0.04    Added is_mode routine - thanks to Gene Boggs
+	Added alternative plagal mode names - thanks to Steve Hay
+	Added default descending chromatic keypref - again, thanks Steve.
+
 0.03	Fixed minor scales + added hamonic + melodic as separate. 
 	Altered notename-generation to fix leading-note bug, handle ## / bb etc.
 

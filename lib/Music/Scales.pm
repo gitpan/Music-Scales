@@ -5,9 +5,9 @@ use Text::Abbrev;
 BEGIN {
 	use Exporter ();
 	use vars qw ($VERSION @ISA @EXPORT);
-	$VERSION     = 0.03;
+	$VERSION     = 0.04;
 	@ISA         = qw (Exporter);
-	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets);
+	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets is_mode);
 }
 
 
@@ -49,6 +49,10 @@ This can be overidden with $keypref, setting to be either '#' or 'b' for sharps 
 =head2 get_scale_offsets($notename[,$scale,$descending,$keypref])
 
 as get_scale_notes(), except it returns a hash of notenames with the values being a semitone offset (-1, 0 or 1) as shown in the synopsis.
+
+=head1 is_mode($modename)
+
+returns true if $modename is a valid mode used in this module.
 
 =head1 SCALES 
 
@@ -116,6 +120,7 @@ This will print every scale in every key, adjusting the enharmonic equivalents a
  Ben Daglish (bdaglish@surfnet-ds.co.uk)
 
  Thanks to Steve Hay for pointing out my 'minor' mix-up and other suggestions.
+ Thanks also to Gene Boggs for the 'is_mode' suggestion / code.
 
 =head1 BUGS 
  
@@ -139,8 +144,10 @@ PDL::Audio::Scale, perl(1).
 
 =cut
 
-my %modes = qw(ionian 1 major 1 dorian 2 phrygian 3 lydian 4 mixolydian 5
-	aeolian 6 minor 6 m 6 locrian 7 harmonicminor 8 hm 8 melodicminor 9 mm 9
+my %modes = qw(ionian 1 major 1 hypolydian 1 dorian 2 hypomyxolydian 2 
+	phrygian 3 hypoaeolian 3 lydian 4 hypolocrian 4 mixolydian 5 hypoionian 5
+	aeolian 6 minor 6 m 6 hypodorian 6 locrian 7 hypophrygian 7 
+	harmonicminor 8 hm 8 melodicminor 9 mm 9
 	blues 10 pentatonic 11 pmaj 11 chromatic 12 diminished 13 wholetone 14
 	augmented 15 hungarianminor 16 3semitone 17 4semitone 18 
 	neapolitanminor 19 nmin 19 neapolitanmajor 20 nmaj 20
@@ -215,7 +222,6 @@ sub get_mode {
 	$mode;
 }
 
-
 sub get_scale_notes {
 	my ($keynote,$mode,$descending,$keypref) = @_;
 	my @notes = ('A'..'G');
@@ -232,6 +238,7 @@ sub get_scale_notes {
 	my @scale = map {($_+$keynum-$dists[0])%12} @dists;
 
 	my %num2note;
+	$keypref='b' if (!$keypref && $descending && $mode == 12);
 	if ($keynote =~ /b/) {%num2note = %fnum2note};
 	if ($keynote =~ /\#/) {%num2note = %snum2note};
 	if ($keypref eq 'b') {%num2note = %fnum2note}; # override
@@ -280,6 +287,12 @@ sub get_scale_notes {
 		unshift @mscale,pop(@mscale);
 	}
 	@mscale;
+}
+
+sub is_mode {
+	my $name = shift;
+    $name =~ s/[^a-zA-Z0-9]//g;
+    return exists $modes{lc $name} ? 1 : 0;
 }
 
 1; 
