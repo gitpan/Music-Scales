@@ -1,5 +1,8 @@
 Revision history for Perl module Music::Scales
 
+0.06	Added get_scale_MIDI
+	get_scale_PDL
+
 0.05	Changed is_mode to is_scale to improve continuity
 	Added scale_to_PDL routine
 	POD changes / fixes

@@ -5,9 +5,9 @@ use Text::Abbrev;
 BEGIN {
 	use Exporter ();
 	use vars qw ($VERSION @ISA @EXPORT);
-	$VERSION     = 0.05;
+	$VERSION     = 0.06;
 	@ISA         = qw (Exporter);
-	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets is_scale scale_to_PDL);
+	@EXPORT      = qw (get_scale_notes get_scale_nums get_scale_offsets is_scale get_scale_PDL get_scale_MIDI);
 }
 
 
@@ -21,7 +21,7 @@ BEGIN {
 
     my @maj = get_scale_notes('Eb');           # defaults to major
     print join(" ",@maj);                      # "Eb F G Ab Bb C D"
-    my @blues = get_scale_nums('bl');		   # 'bl','blu','blue','blues'
+    my @blues = get_scale_nums('bl');          # 'bl','blu','blue','blues'
     print join(" ",@blues);                    # "0 3 5 6 7 10"
     my %min = get_scale_offsets ('G','mm',1);  # descending melodic minor
     print map {"$_=$min{$_} "} sort keys %min; # "A=0 B=-1 C=0 D=0 E=-1 F=0 G=0"
@@ -29,7 +29,8 @@ BEGIN {
 
 =head1 DESCRIPTION
 
- Given a keynote A-G(#/b) and a scale-name, will return the scale, either as an array of notenames or as a hash of semitone-offsets for each note.
+ Given a keynote A-G(#/b) and a scale-name, will return the scale, 
+ either as an array of notenames or as a hash of semitone-offsets for each note.
 
 =head1 METHODS
 
@@ -50,14 +51,17 @@ This can be overidden with $keypref, setting to be either '#' or 'b' for sharps 
 
 as get_scale_notes(), except it returns a hash of notenames with the values being a semitone offset (-1, 0 or 1) as shown in the synopsis.
 
+=head2 get_scale_MIDI($notename,$octave[,$scale,$descending])
+
+as get_scale_notes(), but returns an array of MIDI note-numbers, given an octave number (-1..9).
+
+=head2 get_scale_PDL($notename,$octave[,$scale,$descending])
+
+as get_scale_MIDI(), but returns an array of PDL-format notes.
+
 =head2 is_scale($scalename)
 
 returns true if $scalename is a valid scale name used in this module.
-
-=head2 scale_to_PDL($octave,@scale)
-
-A convenience function to turn an array of notenames into the format used by PDL (lower case, s/f for #/b and with an octave number). 
-For example, join(" ",scale_to_pdl(4,get_scale_notes('G','hm'))) will produce "g4 a4 bf4 c5 d5 ef5 fs5".
 
 =head1 SCALES 
 
@@ -115,7 +119,6 @@ This will print every scale in every key, adjusting the enharmonic equivalents a
  Add further range of scales from http://www.cs.ruu.nl/pub/MIDI/DOC/scales.zip
  Improve enharmonic eqivalents.
  Microtones
- Output notenames in PDL::Audio::Scale format for Frequency generation
  Generate ragas,gamelan etc.  - maybe needs an 'ethnic' subset of modules
 
 =head1 AUTHOR
@@ -229,6 +232,22 @@ sub note_to_num {
 	(defined $note2num{uc($note)}) ? $note2num{uc($note)} : 0;
 }
 
+sub note_to_MIDI {
+	my ($note,$octave) = @_;
+	((note_to_num($note)+9) % 12) + (12 * ++$octave ); 
+}
+
+sub get_scale_MIDI {
+	my ($note,$octave,$mode,$descending) = @_;
+	my $basenum = note_to_MIDI($note,$octave);
+	return map {$basenum + $_} get_scale_nums($mode,$descending);
+}
+
+sub get_scale_PDL {
+	my ($note,$octave,$mode,$descending,$keypref) = @_;
+	scale_to_PDL($octave,get_scale_notes($note,$mode,$descending,$keypref));
+}
+
 sub get_scale_notes {
 	my ($keynote,$mode,$descending,$keypref) = @_;
 	my @notes = ('A'..'G');
@@ -295,6 +314,13 @@ sub is_scale {
 sub scale_to_PDL {
 	my ($octave,@scale)=@_;
 	my @result;
+	my $descending;
+	my $n1 = note_to_num($scale[0]);
+	my $n2 = note_to_num($scale[1]);
+	if ($n2 < $n1 && ($n1-$n2 < 5)) {
+		$descending = 1;
+		@scale = reverse @scale;
+	}
 	my $last = (note_to_num($scale[0]) + 9) % 12;
 	foreach (@scale) {
 		my $n = (note_to_num($_) + 9) % 12;
@@ -304,6 +330,7 @@ sub scale_to_PDL {
 		push @result,lc($_).$octave;
 		$last = $n;
 	}
+	@result = reverse @result if $descending;
 	@result;
 }
 

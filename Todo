@@ -3,7 +3,6 @@ TODO list for Perl module Music::Scales
  Add further range of scales from http://www.cs.ruu.nl/pub/MIDI/DOC/scales.zip
  Improve enharmonic eqivalents.
  Microtones
- Frequency generation (although this is already done by PDL::Audio::Scale)
  Generate ragas,gamelan etc.  - maybe needs an 'ethnic' subset of modules
 
 
